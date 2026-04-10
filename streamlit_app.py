@@ -2,111 +2,115 @@ import streamlit as st
 import pandas as pd
 import random
 
-# 1. PAGE CONFIG & DARK THEME AESTHETICS
-st.set_page_config(page_title="Hospital Pro", layout="centered")
+# 1. THEME & AESTHETICS
+st.set_page_config(page_title="Hospital Command Center", layout="centered")
 
+# Custom CSS for that "Premium" look
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; color: white; }
-    .stButton>button { width: 100%; border-radius: 10px; height: 3em; background-color: #2e7d32; color: white; }
+    .stApp { background-color: #0e1117; }
+    div[data-testid="stMetricValue"] { color: #4CAF50; }
     .token-card { 
         background: rgba(255, 255, 255, 0.05); 
-        padding: 25px; 
-        border-radius: 15px; 
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 30px; 
+        border-radius: 20px; 
+        border: 2px solid #4CAF50;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    .admin-box {
-        background: rgba(255, 75, 75, 0.05);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px dashed #ff4b4b;
+    .doctor-tag {
+        background: #1e2130;
+        padding: 10px;
+        border-radius: 10px;
+        border-left: 5px solid #2196F3;
+        margin: 5px 0;
     }
     </style>
     """, unsafe_all_ow_html=True)
 
-# 2. INITIALIZE DATA (This keeps the app from resetting)
+# 2. DATA INITIALIZATION (The "Brain")
 if 'queue' not in st.session_state:
     st.session_state.queue = []
 if 'doctors' not in st.session_state:
-    st.session_state.doctors = ["Dr. Smith (General)", "Dr. Khanna (Cardio)"]
-if 'my_token' not in st.session_state:
-    st.session_state.my_token = None
+    st.session_state.doctors = ["Dr. Arhaan (General)", "Dr. Sara (Emergency)"]
+if 'my_token_id' not in st.session_state:
+    st.session_state.my_token_id = None
 
-# 3. SIDEBAR NAVIGATION (Admin vs Patient)
-st.sidebar.title("🏥 Navigation")
-mode = st.sidebar.radio("Go to:", ["Patient Portal", "Admin Dashboard"])
+# 3. NAVIGATION
+st.sidebar.title("🏥 Hospital Menu")
+mode = st.sidebar.radio("Switch View:", ["Patient Portal", "Admin Settings"])
 
-# --- ADMIN DASHBOARD ---
-if mode == "Admin Dashboard":
-    st.title("🛡️ Admin Settings")
-    st.markdown("Only authorized staff should access this area.")
+# --- ADMIN SETTINGS (Hidden from Patients) ---
+if mode == "Admin Settings":
+    st.title("🛡️ Admin Control Panel")
     
-    with st.container():
-        st.write("### Manage Doctors")
-        new_doc = st.text_input("Add New Doctor Name")
-        if st.button("Add Doctor"):
-            if new_doc:
-                st.session_state.doctors.append(new_doc)
-                st.rerun()
-        
-        st.write("---")
-        st.write("### Current Active Doctors")
-        for i, doc in enumerate(st.session_state.doctors):
-            cols = st.columns([3, 1])
-            cols[0].write(doc)
-            if cols[1].button("Remove", key=f"del_{i}"):
-                st.session_state.doctors.pop(i)
-                st.rerun()
+    # Manage Doctors
+    st.subheader("👨‍⚕️ Manage Hospital Staff")
+    new_doc = st.text_input("Enter Doctor Name & Speciality")
+    if st.button("Add Doctor to Duty"):
+        if new_doc:
+            st.session_state.doctors.append(new_doc)
+            st.success(f"Added {new_doc}")
+    
+    st.write("---")
+    st.write("**Current Staff (Click to remove):**")
+    for i, doc in enumerate(st.session_state.doctors):
+        col_a, col_b = st.columns([4, 1])
+        col_a.write(f"📍 {doc}")
+        if col_b.button("🗑️", key=f"del_{i}"):
+            st.session_state.doctors.pop(i)
+            # This line forces a refresh safely
+            st.empty() 
 
 # --- PATIENT PORTAL ---
 else:
     st.title("🏥 Patient Check-In")
-    
-    # Feature 1: Personal Token Display (Separate from Board)
-    if st.session_state.my_token:
+
+    # FEATURE: YOUR PRIVATE TOKEN CARD
+    if st.session_state.my_token_id:
         st.markdown(f"""
             <div class="token-card">
-                <h2 style='color: #4CAF50;'>YOUR TOKEN</h2>
-                <h1 style='font-size: 70px;'>{st.session_state.my_token['id']}</h1>
-                <p>Status: <b>{st.session_state.my_token['status']}</b></p>
-                <p>Estimated Wait: 15 mins</p>
+                <p style='color: #888; margin-bottom: 0;'>YOUR PERSONAL TOKEN</p>
+                <h1 style='font-size: 80px; margin: 0; color: #4CAF50;'>{st.session_state.my_token_id}</h1>
+                <p style='font-size: 18px;'>Please wait in the lobby. We will call you soon.</p>
             </div>
             """, unsafe_all_ow_html=True)
 
-    # Feature 2: Registration Form
-    with st.expander("Register for a New Token", expanded=not st.session_state.my_token):
-        name = st.text_input("Enter Full Name")
-        triage = st.selectbox("Urgency", ["Routine", "Urgent", "Emergency"])
+    # FEATURE: REGISTRATION FORM
+    with st.expander("Register for a Token", expanded=not st.session_state.my_token_id):
+        p_name = st.text_input("Full Name")
+        p_triage = st.selectbox("Urgency Level", ["Routine Checkup", "Urgent Care", "EMERGENCY"])
         
-        if st.button("Generate My Token"):
-            if name:
-                new_id = f"H-{random.randint(1000, 9999)}"
-                new_entry = {"id": new_id, "name": name, "triage": triage, "status": "Waiting"}
+        if st.button("Generate Token"):
+            if p_name:
+                token = f"TK-{random.randint(100, 999)}"
+                new_patient = {"id": token, "name": p_name, "triage": p_triage}
                 
-                # Priority Logic: Emergencies go to the front
-                if triage == "Emergency":
-                    st.session_state.queue.insert(0, new_entry)
+                # Priority logic: EMERGENCY goes to top
+                if p_triage == "EMERGENCY":
+                    st.session_state.queue.insert(0, new_patient)
                 else:
-                    st.session_state.queue.append(new_entry)
+                    st.session_state.queue.append(new_patient)
                 
-                st.session_state.my_token = new_entry
-                st.rerun()
+                st.session_state.my_token_id = token
+                st.write("Token Generated! Look above.")
 
-    # Feature 3: Live Priority Board (Simple List)
+    # FEATURE: PUBLIC LIVE BOARD (ID ONLY)
     st.write("---")
-    st.subheader("📋 Public Waitlist")
+    st.subheader("📋 Live Waitlist Status")
     if st.session_state.queue:
-        df = pd.DataFrame(st.session_state.queue)[['id', 'triage', 'status']]
-        st.table(df)
+        # We only show IDs on the public board for privacy
+        display_df = pd.DataFrame(st.session_state.queue)[['id', 'triage']]
+        st.table(display_df)
     else:
-        st.info("No one is currently in the queue.")
+        st.info("The queue is currently empty.")
 
-    # Feature 4: Display Doctors (View Only for Patients)
+    # FEATURE: DOCTORS ON DUTY
     st.write("---")
-    st.subheader("👨‍⚕️ Doctors on Duty")
-    cols = st.columns(len(st.session_state.doctors) if st.session_state.doctors else 1)
-    for i, doc in enumerate(st.session_state.doctors):
-        with cols[i % len(cols)]:
-            st.info(doc)
+    st.subheader("👨‍⚕️ Available Doctors")
+    if st.session_state.doctors:
+        for d in st.session_state.doctors:
+            st.markdown(f'<div class="doctor-tag">{d}</div>', unsafe_all_ow_html=True)
+    else:
+        st.warning("No doctors currently assigned.")
